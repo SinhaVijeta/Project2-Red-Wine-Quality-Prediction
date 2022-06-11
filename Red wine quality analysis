@@ -1,0 +1,242 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from  matplotlib.pyplot import subplot
+%matplotlib inline
+import sys
+!{sys.executable} -m pip install xgboost
+from xgboost import XGBClassifier
+from sklearn import svm
+
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+
+#reading the file
+df = pd.read_csv("https://raw.githubusercontent.com/dsrscientist/DSData/master/winequality-red.csv")
+
+#Lets take a glimpse of the dataset
+# To check all are numerical fields
+#Quaity is the dependent variable(discrete). All other fields are continuous.
+#Data is free from missing values
+df.head()
+
+df.describe()
+
+#checking data types
+df.info()
+
+#Checking null values in each column
+df.isnull().sum()
+
+#Checking length of dataset
+print(df.shape)
+
+df.corr()
+
+#DATA VISUALIZATION
+sns.countplot(df['quality'])
+
+#Check the relationship between each variables
+plt.figure(figsize=(20,10))
+sns.heatmap(df.corr(), annot=True,cmap='Blues')
+plt.show()
+
+#looking into the categorical variables
+
+df_cat=df[['fixed acidity','volatile acidity','citric acid','residual sugar','chlorides','free sulfur dioxide','total sulfur dioxide','density','pH','sulphates','alcohol']]
+
+for i in df_cat.columns:
+    cat_num=df_cat[i].value_counts()
+    print("graph for %s: total = %d" % (i,len(cat_num)))
+    chart=sns.barplot(x=cat_num.index, y=cat_num)
+    chart.set_xticklabels(chart.get_xticklabels(), rotation=90)
+    plt.show()
+
+#Target variable
+df['quality'].value_counts()
+
+plt.figure(1, figsize=(10,10))
+df['quality'].value_counts().plot.pie(autopct="%1.2f%%")
+
+quality = df["quality"].value_counts().sort_index(ascending=True)
+explode_list = [0.1, 0.1, 0, 0, 0, 0.1]
+ax = quality.plot(kind='pie',
+             figsize = (10,10),
+             autopct='%1.1f%%', 
+             startangle=45,
+             labels=None,         
+             pctdistance=1.1,    
+             explode=explode_list,
+             textprops={'fontsize': 14})
+ax.patch.set_facecolor('white')
+plt.title('Wine Quality', size = 20)
+ax.set(ylabel=None)
+plt.axis('equal') 
+plt.legend(labels=quality.index, loc="upper left", fontsize=16);
+
+plt.figure(figsize=(15,10))
+ax = sns.distplot(df['alcohol'])
+ax.set_title('Distribution of Alcohol Concentration', size=20)
+ax.set(ylabel='Density', xlabel='Alcohol');
+
+#DATA VISUALIZATION
+
+plt.figure(figsize=(16,10))
+sns.boxplot(y='fixed acidity',x='quality',data=df)
+plt.yticks(rotation =90,fontsize=12)
+plt.xticks(fontsize=12)
+plt.title("Impact of fixed acidity on Quality",fontsize=30)
+plt.xlabel('Quality',fontsize=26)
+plt.ylabel('Fixed Acidity',fontsize=26)
+plt.show()
+
+df.columns
+
+df['Good'] =df['quality'].apply(lambda x : 1 if(x>5) else 0)
+df.drop(['quality'],inplace=True,axis=1)
+
+#Lets see if we have a balanced distribution 
+df['Good'].value_counts()
+
+plt.figure(figsize=(16,10))
+sns.scatterplot(x='alcohol',y='residual sugar',data=df,hue='Good')
+plt.yticks(rotation =90,fontsize=12)
+plt.xticks(fontsize=12)
+plt.title("PLOT- A ",fontsize=30)
+plt.xlabel('Alchohol',fontsize=26)
+plt.ylabel('Residual Sugar',fontsize=26)
+plt.show()
+
+plt.figure(figsize=(16,10))
+sns.boxplot(y='residual sugar',x='Good',data=df)
+plt.yticks(rotation =90,fontsize=12)
+plt.xticks(fontsize=12)
+plt.title("PLOT- B Checking outliers",fontsize=30)
+plt.xlabel('Good',fontsize=26)
+plt.ylabel('Residual Sugar',fontsize=26)
+plt.show()
+
+plt.figure(figsize=(16,10))
+sns.boxplot(y='free sulfur dioxide',x='Good',data=df)
+plt.yticks(rotation =90,fontsize=12)
+plt.xticks(fontsize=12)
+plt.title("PLOT- C- Checking outliers",fontsize=30)
+plt.xlabel('Good',fontsize=26)
+plt.ylabel('free sulfur dioxide',fontsize=26)
+plt.show()
+
+plt.figure(figsize=(16,10))
+sns.boxplot(y='total sulfur dioxide',x='Good',data=df)
+plt.yticks(rotation =90,fontsize=12)
+plt.xticks(fontsize=12)
+plt.title("PLOT- D Checking outliers",fontsize=30)
+plt.xlabel('Good',fontsize=26)
+plt.ylabel('Total Sulphur Dioxide',fontsize=26)
+plt.show()
+
+#PRE-PROCESSING OUR DATA
+df['quality'].min()
+
+df['quality'].max()
+
+values = (2, 6, 9)
+qual = ['bad', 'good']
+df['quality'] = pd.cut(df['quality'], bins = values, labels = qual)
+df.head()
+
+
+#Now, we have 2 groups i.e. good quality and bad quality wine. This helps us with label encoding to classify data better.
+df['quality'].value_counts()
+
+label_enc = LabelEncoder()
+df['quality']=label_enc.fit_transform(df['quality'])
+
+#SPLITTING TRAINING AND TESTING DATA
+X = df.drop('quality',axis=1)
+y = df['quality']
+
+
+xtrain,xtest,ytrain,ytest = train_test_split(X,y,test_size=0.2,random_state=42)
+
+#Now, let us start by scaling the data and normalizing it to a particular range of values
+std_scale = StandardScaler()
+xtrain = std_scale.fit_transform(xtrain)
+xtest = std_scale.fit_transform(xtest)
+
+#CLASSIFICATION MODELS
+#1. SVM (Support Vector Machine)
+#2. Random Forest
+#3.XGBoost CLASSIFIER
+
+
+
+#1. SVM (SUPPORT VECTOR MACHINE)
+model = svm.SVC()
+model.fit(xtrain,ytrain)
+y0_pred = model.predict(xtest)
+print(accuracy_score(ytest,y0_pred))
+
+#2. RANDOM FOREST
+rf = RandomForestClassifier()
+rf.fit(xtrain,ytrain)
+y1_pred = rf.predict(xtest)
+print(accuracy_score(ytest,y1_pred))
+
+
+
+#3. XGBoost CLASSIFIER
+xgb = XGBClassifier(max_depth=3,n_estimators=200,learning_rate=0.5)
+xgb.fit(xtrain,ytrain)
+y2_pred = xgb.predict(xtest)
+print(accuracy_score(ytest,y2_pred))
+
+#CONFUSION MATRIX
+print(confusion_matrix(ytest,y2_pred))
+
+#LOGISTIC REGRESSION
+x=df.drop('quality', axis = 1)
+y= df['quality']
+
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler(feature_range = (0,1))
+scaler.fit_transform(x)
+
+x.head()
+
+from sklearn.model_selection import train_test_split
+
+x_train, x_test, y_train, y_test = train_test_split(x,y, test_size=0.2, random_state=0)
+
+from sklearn.linear_model import LogisticRegression
+classifier_log = LogisticRegression()
+model = classifier_log.fit(xtrain,ytrain)
+
+y_pred_log = classifier_log.predict(xtest)
+
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_pred_log, ytest)*100)
+
+#DECISION TREE CLASSIFIER
+from sklearn.tree import DecisionTreeClassifier
+
+# doing pruning to avoid overfitting
+classifier_tree=DecisionTreeClassifier(criterion ='gini', splitter = 'random',
+                         max_leaf_nodes = 10, min_samples_leaf = 5, 
+                         max_depth = 6)
+model = classifier_tree.fit(xtrain, ytrain)
+
+y_pred_tree = classifier_tree.predict(xtest)
+
+print(accuracy_score(y_pred_tree, ytest)*100)
+
+#CONCLUSION
+print(classification_report(ytest,y2_pred))
+
+
+
